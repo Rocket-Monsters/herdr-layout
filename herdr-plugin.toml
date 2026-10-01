@@ -2,7 +2,7 @@ id = "rocket-monsters.herdr-layout"
 name = "Herdr Layout"
 version = "0.1.0"
 min_herdr_version = "0.9.0"
-description = "Worktrees: two shells stacked left, lazygit right"
+description = "Lays out new worktree workspaces from the project's .herdr-layout.yml"
 platforms = ["macos"]
 
 [[events]]
