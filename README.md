@@ -1,123 +1,162 @@
 # herdr-layout
 
-A [herdr](https://herdr.dev) plugin that lays out a new worktree workspace from a
-`.herdr-layout` file in the project.
+Open every new [herdr](https://herdr.dev) worktree with your panes already set up.
 
-It runs on herdr's `worktree.created` event. There is no default layout: if the project has
-no `.herdr-layout`, the plugin does nothing. Plain workspaces (not worktrees) are left alone.
+Put a small `.herdr-layout` file in your project, and each time herdr creates a worktree for
+it, the plugin splits the panes and starts your commands for you:
 
-## Requirements
+```
+┌──────────┬──────────┐
+│  shell   │          │
+├──────────┤ lazygit  │
+│  shell   │          │
+└──────────┴──────────┘
+```
 
-Works on macOS, Linux and Windows.
+- **Works everywhere:** macOS, Linux and Windows.
+- **Nothing to install:** it uses the shell your system already has.
+- **Per project:** each project decides its own layout. No file, no change.
 
-- herdr ≥ 0.9.0
-- whatever your layout's commands run (e.g. `lazygit`)
+## Quick start
 
-Nothing else to install. Linux and macOS run [`layout.sh`](layout.sh) with the system `sh`;
-Windows runs [`layout.ps1`](layout.ps1) with the built-in Windows PowerShell.
-
-## Install
-
-From GitHub (the repo is private, so `git` must be able to clone it; `gh auth setup-git` is enough):
+**1. Install the plugin**
 
 ```sh
 herdr plugin install Rocket-Monsters/herdr-layout
 ```
 
-Or link a local clone, so edits apply without reinstalling:
-
-```sh
-git clone https://github.com/Rocket-Monsters/herdr-layout.git
-herdr plugin link ./herdr-layout
-```
-
-Check it's registered and enabled:
-
-```sh
-herdr plugin list
-```
-
-## Update / uninstall
-
-herdr has no `plugin update`; reinstall to pull the latest:
-
-```sh
-herdr plugin uninstall rocket-monsters.herdr-layout
-herdr plugin install Rocket-Monsters/herdr-layout
-```
-
-A linked clone only needs `git pull`. To remove a linked clone: `herdr plugin unlink rocket-monsters.herdr-layout`.
-
-Enable or disable without uninstalling:
-
-```sh
-herdr plugin disable rocket-monsters.herdr-layout
-herdr plugin enable rocket-monsters.herdr-layout
-```
-
-## Configuration
-
-Add `.herdr-layout` to the project root and commit it. The plugin looks for it in:
-
-1. the new worktree's checkout (so each branch can carry its own layout), then
-2. the repo's main checkout (so branches created before the file existed still get it).
-
-If neither has the file, nothing happens.
+**2. Add a `.herdr-layout` file to the root of your project**
 
 ```
-# Two shells stacked left, lazygit right.
-#
-#   ┌──────────┬──────────┐
-#   │  shell   │          │
-#   ├──────────┤ lazygit  │
-#   │  shell   │          │
-#   └──────────┴──────────┘
-#
 # split  of  ratio  command
 -        -   -      -
 right    0   -      lazygit
 down     0   -      -
 ```
 
-One pane per line, applied in order. Columns are separated by spaces; `-` means "use the
-default". Blank lines and lines starting with `#` are ignored. The first pane line is the pane
-herdr already opened (its `split`, `of` and `ratio` are ignored); every later line creates a
-pane by splitting an earlier one.
+**3. Create a worktree in herdr.** It opens with the layout above. Commit the file so
+everyone on the project gets the same layout.
 
-| Column | Default | Meaning |
-|--------|---------|---------|
-| `split` | `right` | `right` or `down` |
-| `of` | previous pane | number of the pane to split (the first pane line is `0`) |
-| `ratio` | herdr's default | size of the split, e.g. `0.3` |
-| `command` | none (plain shell) | command to run in the pane; the rest of the line, so it may contain spaces |
+## Writing a layout
 
-Order matters: in the example, splitting pane 0 right first makes two columns, then splitting
-pane 0 down stacks the left column.
+Each line describes one pane. The first line is the pane herdr already opened, and each line
+after it adds a new pane by splitting one of the panes before it.
 
-The event the plugin reacts to is set in [`herdr-plugin.toml`](herdr-plugin.toml) under `[[events]]`
-(one entry per platform).
+A line has four columns, separated by spaces:
 
-## Contributing
+| Column | What it means | If you write `-` |
+|--------|---------------|------------------|
+| `split` | Where the new pane goes: `right` or `down` | `right` |
+| `of` | Which pane to split, by number. The first line is pane `0`, the next is `1`, and so on | the pane on the line above |
+| `ratio` | How much space the pane being split **keeps**, from `0` to `1`. The new pane gets the rest | an even split |
+| `command` | What to run in the new pane. Everything to the end of the line, spaces included | a plain shell |
 
-`layout.sh` and `layout.ps1` implement the same behavior; a change to one needs the same change
-in the other. `layout.sh` sticks to POSIX `sh` (it runs under `dash` on Debian/Ubuntu) and reads
-herdr's JSON with `grep`, so it needs no extra tools. `layout.ps1` targets Windows PowerShell 5.1.
+On the first line, only `command` is used; write `-` for the other three.
 
-### Copying gitignored dev files into new worktrees
+Lines starting with `#` are comments, and blank lines are ignored.
 
-That's not this plugin's job. Do it in the repo with a git `post-checkout` hook, so it
-works for every tool that creates worktrees, not only herdr. See `.worktreeinclude` and
-`scripts/worktree-setup.sh` in `rm-heimdall` for a working example.
+### Examples
+
+**Two panes side by side**
+
+```
+-      -  -  -
+right  -  -  -
+```
+
+**Editor on top, small terminal at the bottom** (the editor keeps 70%)
+
+```
+-     -  -    nvim
+down  0  0.7  -
+```
+
+**Two shells stacked left, lazygit right**
+
+```
+-      -  -  -
+right  0  -  lazygit
+down   0  -  -
+```
+
+Order matters in the last one. Splitting pane `0` to the right first makes two columns; then
+splitting pane `0` down stacks the left column. Swap the two lines and you get two panes on
+top and one full-width pane at the bottom instead.
+
+### Where the plugin looks for the file
+
+1. In the new worktree, so a branch can carry its own layout.
+2. If it isn't there, in the project's main checkout, so branches made before you added the
+   file still get the layout.
+
+If neither place has a `.herdr-layout`, the plugin does nothing.
+
+## Requirements
+
+- herdr 0.9.0 or newer
+- The programs your layout runs (for example `lazygit`)
+
+That's all. On macOS and Linux the plugin runs with `sh`; on Windows it runs with the
+Windows PowerShell that comes with the system.
+
+## Installing, updating and removing
+
+| To... | Run |
+|-------|-----|
+| Install | `herdr plugin install Rocket-Monsters/herdr-layout` |
+| Check it's installed | `herdr plugin list` |
+| Update | `herdr plugin uninstall rocket-monsters.herdr-layout`, then install again |
+| Turn off for a while | `herdr plugin disable rocket-monsters.herdr-layout` |
+| Turn back on | `herdr plugin enable rocket-monsters.herdr-layout` |
+| Remove | `herdr plugin uninstall rocket-monsters.herdr-layout` |
+
+herdr has no update command, which is why updating means reinstalling. Your `.herdr-layout`
+files live in your projects, so reinstalling doesn't touch them.
+
+If `install` can't download the repository, check that `git` can reach GitHub from your
+machine (for a private copy, run `gh auth setup-git` first).
 
 ## Troubleshooting
 
-If a new worktree opens without the layout, read the plugin's command logs:
+**A new worktree opened without the layout.** Look at the plugin's log:
 
 ```sh
 herdr plugin log list
 ```
 
-`layout.sh` / `layout.ps1` log the event JSON herdr sent and which layout file it used.
+The log shows which layout file the plugin used, or one of these messages:
 
-- `no .herdr-layout, skipping`: no layout file in the worktree or the main checkout.
-- `no workspace_id in event`: the event payload changed shape.
+| Message | What it means |
+|---------|---------------|
+| `no .herdr-layout, skipping` | Neither the worktree nor the main checkout has the file. Check the name: it starts with a dot and has no extension. |
+| `no workspace_id in event` | herdr sent an event the plugin doesn't understand. Please open an issue with the log. |
+
+**The panes are there but a command didn't start.** Make sure the program is installed and
+on your `PATH`. Try running the command yourself in a herdr pane.
+
+**Plain workspaces don't get the layout.** That's expected: the plugin only runs when herdr
+creates a worktree.
+
+## Contributing
+
+Changes are welcome. A few things to know:
+
+- The plugin is two scripts that do the same job: [`layout.sh`](layout.sh) for macOS and Linux,
+  and [`layout.ps1`](layout.ps1) for Windows. A change to one needs the same change in the other.
+- `layout.sh` must stay plain POSIX `sh` (Debian and Ubuntu run it with `dash`) and must not need
+  extra tools such as `jq`.
+- `layout.ps1` must work in Windows PowerShell 5.1, the version built into Windows.
+- [`herdr-plugin.toml`](herdr-plugin.toml) tells herdr which script to run on which system.
+
+To try a change locally, clone the repo and link it instead of installing:
+
+```sh
+git clone https://github.com/Rocket-Monsters/herdr-layout.git
+herdr plugin link ./herdr-layout
+```
+
+Edits to the scripts take effect on the next worktree you create.
+
+## License
+
+[MIT](LICENSE)
