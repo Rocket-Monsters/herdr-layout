@@ -1,24 +1,19 @@
 # herdr-layout
 
-A [herdr](https://herdr.dev) plugin that lays out every new worktree workspace:
+A [herdr](https://herdr.dev) plugin that lays out a new worktree workspace from a
+`.herdr-layout.yml` file in the project.
 
-```
-┌──────────┬──────────┐
-│  shell   │          │
-├──────────┤ lazygit  │
-│  shell   │          │
-└──────────┴──────────┘
-```
-
-It runs on herdr's `worktree.created` event. Plain workspaces (not worktrees) are left alone.
+It runs on herdr's `worktree.created` event. There is no default layout: if the project has
+no `.herdr-layout.yml`, the plugin does nothing. Plain workspaces (not worktrees) are left alone.
 
 ## Requirements
 
 - herdr ≥ 0.9.0 (macOS)
-- [`jq`](https://jqlang.org) and [`lazygit`](https://github.com/jesseduffield/lazygit) on `PATH`
+- [`jq`](https://jqlang.org) and [`yq`](https://github.com/mikefarah/yq) (v4) on `PATH`
+- whatever your layout's `command`s run (e.g. `lazygit`)
 
 ```sh
-brew install jq lazygit
+brew install jq yq
 ```
 
 ## Install
@@ -62,12 +57,44 @@ herdr plugin enable rocket-monsters.herdr-layout
 
 ## Configuration
 
-The plugin has no config file. The layout lives in [`layout.sh`](layout.sh): it splits the
-workspace's first pane right (running `lazygit`), then splits the first pane down. To change
-it, edit `layout.sh` in a linked clone; the `herdr pane split` / `herdr pane run` calls are the
-whole layout.
+Add `.herdr-layout.yml` to the project root and commit it. The plugin looks for it in:
 
-The event it reacts to is set in [`herdr-plugin.toml`](herdr-plugin.toml) under `[[events]]`.
+1. the new worktree's checkout (so each branch can carry its own layout), then
+2. the repo's main checkout (so branches created before the file existed still get it).
+
+If neither has the file, nothing happens.
+
+```yaml
+# Two shells stacked left, lazygit right.
+#
+#   ┌──────────┬──────────┐
+#   │  shell   │          │
+#   ├──────────┤ lazygit  │
+#   │  shell   │          │
+#   └──────────┴──────────┘
+panes:
+  - {}                # 0: the workspace's initial pane
+  - split: right      # 1
+    of: 0
+    command: lazygit
+  - split: down       # 2
+    of: 0
+```
+
+`panes` is a list, applied in order. The first entry is the pane herdr already opened;
+every later entry is created by splitting an earlier one.
+
+| Key | Applies to | Default | Meaning |
+|-----|-----------|---------|---------|
+| `split` | panes 1+ | `right` | `right` or `down` |
+| `of` | panes 1+ | previous pane | index of the pane to split |
+| `ratio` | panes 1+ | herdr's default | size of the split, e.g. `0.3` |
+| `command` | any pane | none (plain shell) | command to run in the pane |
+
+Order matters: in the example, splitting pane 0 right first makes two columns, then splitting
+pane 0 down stacks the left column.
+
+The event the plugin reacts to is set in [`herdr-plugin.toml`](herdr-plugin.toml) under `[[events]]`.
 
 ### Copying gitignored dev files into new worktrees
 
@@ -83,5 +110,7 @@ If a new worktree opens without the layout, read the plugin's command logs:
 herdr plugin log list
 ```
 
-`layout.sh` prints the event JSON it received to stderr, so the log shows what herdr sent.
-"no workspace_id in event" means the event payload changed shape.
+`layout.sh` logs the event JSON herdr sent and which layout file it used.
+
+- `no .herdr-layout.yml, skipping`: no layout file in the worktree or the main checkout.
+- `no workspace_id in event`: the event payload changed shape.
