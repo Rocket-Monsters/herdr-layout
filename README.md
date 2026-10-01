@@ -8,13 +8,11 @@ no `.herdr-layout.yml`, the plugin does nothing. Plain workspaces (not worktrees
 
 ## Requirements
 
-- herdr ≥ 0.9.0 (macOS)
-- [`jq`](https://jqlang.org) and [`yq`](https://github.com/mikefarah/yq) (v4) on `PATH`
-- whatever your layout's `command`s run (e.g. `lazygit`)
+Works on macOS, Linux and Windows.
 
-```sh
-brew install jq yq
-```
+- herdr ≥ 0.9.0
+- [Bun](https://bun.sh) on `PATH` (it parses the YAML; no other dependencies)
+- whatever your layout's `command`s run (e.g. `lazygit`)
 
 ## Install
 
@@ -110,7 +108,7 @@ If a new worktree opens without the layout, read the plugin's command logs:
 herdr plugin log list
 ```
 
-`layout.sh` logs the event JSON herdr sent and which layout file it used.
+`layout.ts` logs the event JSON herdr sent and which layout file it used.
 
 - `no .herdr-layout.yml, skipping`: no layout file in the worktree or the main checkout.
 - `no workspace_id in event`: the event payload changed shape.

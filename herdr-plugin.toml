@@ -1,10 +1,10 @@
 id = "rocket-monsters.herdr-layout"
 name = "Herdr Layout"
-version = "0.1.0"
+version = "0.2.0"
 min_herdr_version = "0.9.0"
 description = "Lays out new worktree workspaces from the project's .herdr-layout.yml"
-platforms = ["macos"]
+platforms = ["linux", "macos", "windows"]
 
 [[events]]
 on = "worktree.created"
-command = ["bash", "layout.sh"]
+command = ["bun", "layout.ts"]
