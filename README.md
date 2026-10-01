@@ -55,6 +55,23 @@ On the first line, only `command` is used; write `-` for the other three.
 
 Lines starting with `#` are comments, and blank lines are ignored.
 
+### Setup steps
+
+A line that starts with `run` isn't a pane. It runs its command once, inside the new worktree,
+before going on to the next line. Use it for setup such as copying local config files:
+
+```
+run  git fetch
+run  ./scripts/worktree-setup.sh
+-      -  -  -
+right  0  -  lazygit
+```
+
+`run` lines don't get a pane number, so `of` still counts only pane lines. Steps run in the
+order they appear. Put them first if a pane needs what they set up. The output goes to the
+plugin log. If a step fails, the plugin logs `run failed` and carries on with the rest.
+On Windows, the command runs in PowerShell.
+
 ### Examples
 
 **Two panes side by side**

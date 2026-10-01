@@ -20,11 +20,23 @@ for dir in "$(field path "$ev")" "$(field repo_root "$ev")"; do
 done
 [ -n "$layout" ] || { echo "no .herdr-layout, skipping" >&2; exit 0; }
 echo "layout: $layout" >&2
+wt=$(field path "$ev")
 
 id_0=$(field pane_id "$("$h" pane list --workspace "$ws")")
 i=0
-tr -d '\r' < "$layout" | while read -r split of ratio cmd || [ -n "$split" ]; do
-  case "$split" in '' | '#'*) continue ;; esac
+tr -d '\r' < "$layout" | while read -r line || [ -n "$line" ]; do
+  case "$line" in '' | '#'*) continue ;; esac
+  read -r split of ratio cmd <<EOF
+$line
+EOF
+  # "run <command>": a one-off setup step in the worktree, not a pane. A failure is logged
+  # and the layout carries on.
+  if [ "$split" = run ]; then
+    cmd=${line#run}
+    echo "run: $cmd" >&2
+    (cd "$wt" && sh -c "$cmd") </dev/null >&2 || echo "run failed (exit $?):$cmd" >&2
+    continue
+  fi
   if [ "$i" -gt 0 ]; then
     [ "$of" != - ] && [ -n "$of" ] || of=$((i - 1))
     [ "$split" != - ] || split=right

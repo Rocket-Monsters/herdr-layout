@@ -23,6 +23,19 @@ $layout = @($data.worktree.path, $data.workspace.worktree.repo_root) |
   Select-Object -First 1
 if (-not $layout) { [Console]::Error.WriteLine('no .herdr-layout, skipping'); exit 0 }
 [Console]::Error.WriteLine("layout: $layout")
+$wt = $data.worktree.path
+
+# "run <command>": a one-off setup step in the worktree, not a pane. A failure is logged
+# and the layout carries on.
+function Invoke-Setup($c) {
+  $ErrorActionPreference = 'Continue'
+  [Console]::Error.WriteLine("run: $c")
+  if (-not $wt) { [Console]::Error.WriteLine("run failed (no worktree path): $c"); return }
+  Push-Location -LiteralPath $wt
+  try { & powershell -NoProfile -Command $c 2>&1 | ForEach-Object { [Console]::Error.WriteLine("$_") } }
+  finally { Pop-Location }
+  if ($LASTEXITCODE) { [Console]::Error.WriteLine("run failed (exit $LASTEXITCODE): $c") }
+}
 
 $ids = @{ 0 = (Invoke-Herdr pane list --workspace $ws).result.panes[0].pane_id }
 $i = 0
@@ -30,6 +43,7 @@ foreach ($line in Get-Content -LiteralPath $layout) {
   $line = $line.Trim()
   if (-not $line -or $line.StartsWith('#')) { continue }
   $split, $of, $ratio, $cmd = $line -split '\s+', 4
+  if ($split -eq 'run') { Invoke-Setup ($line -split '\s+', 2)[1]; continue }
   if ($i -gt 0) {
     $src = if ($of -and $of -ne '-') { [int]$of } else { $i - 1 }
     $dir = if ($split -ne '-') { $split } else { 'right' }
