@@ -1,18 +1,20 @@
 # herdr-layout
 
 A [herdr](https://herdr.dev) plugin that lays out a new worktree workspace from a
-`.herdr-layout.yml` file in the project.
+`.herdr-layout` file in the project.
 
 It runs on herdr's `worktree.created` event. There is no default layout: if the project has
-no `.herdr-layout.yml`, the plugin does nothing. Plain workspaces (not worktrees) are left alone.
+no `.herdr-layout`, the plugin does nothing. Plain workspaces (not worktrees) are left alone.
 
 ## Requirements
 
 Works on macOS, Linux and Windows.
 
 - herdr ≥ 0.9.0
-- [Bun](https://bun.sh) on `PATH` (it parses the YAML; no other dependencies)
-- whatever your layout's `command`s run (e.g. `lazygit`)
+- whatever your layout's commands run (e.g. `lazygit`)
+
+Nothing else to install. Linux and macOS run [`layout.sh`](layout.sh) with the system `sh`;
+Windows runs [`layout.ps1`](layout.ps1) with the built-in Windows PowerShell.
 
 ## Install
 
@@ -55,14 +57,14 @@ herdr plugin enable rocket-monsters.herdr-layout
 
 ## Configuration
 
-Add `.herdr-layout.yml` to the project root and commit it. The plugin looks for it in:
+Add `.herdr-layout` to the project root and commit it. The plugin looks for it in:
 
 1. the new worktree's checkout (so each branch can carry its own layout), then
 2. the repo's main checkout (so branches created before the file existed still get it).
 
 If neither has the file, nothing happens.
 
-```yaml
+```
 # Two shells stacked left, lazygit right.
 #
 #   ┌──────────┬──────────┐
@@ -70,29 +72,36 @@ If neither has the file, nothing happens.
 #   ├──────────┤ lazygit  │
 #   │  shell   │          │
 #   └──────────┴──────────┘
-panes:
-  - {}                # 0: the workspace's initial pane
-  - split: right      # 1
-    of: 0
-    command: lazygit
-  - split: down       # 2
-    of: 0
+#
+# split  of  ratio  command
+-        -   -      -
+right    0   -      lazygit
+down     0   -      -
 ```
 
-`panes` is a list, applied in order. The first entry is the pane herdr already opened;
-every later entry is created by splitting an earlier one.
+One pane per line, applied in order. Columns are separated by spaces; `-` means "use the
+default". Blank lines and lines starting with `#` are ignored. The first pane line is the pane
+herdr already opened (its `split`, `of` and `ratio` are ignored); every later line creates a
+pane by splitting an earlier one.
 
-| Key | Applies to | Default | Meaning |
-|-----|-----------|---------|---------|
-| `split` | panes 1+ | `right` | `right` or `down` |
-| `of` | panes 1+ | previous pane | index of the pane to split |
-| `ratio` | panes 1+ | herdr's default | size of the split, e.g. `0.3` |
-| `command` | any pane | none (plain shell) | command to run in the pane |
+| Column | Default | Meaning |
+|--------|---------|---------|
+| `split` | `right` | `right` or `down` |
+| `of` | previous pane | number of the pane to split (the first pane line is `0`) |
+| `ratio` | herdr's default | size of the split, e.g. `0.3` |
+| `command` | none (plain shell) | command to run in the pane; the rest of the line, so it may contain spaces |
 
 Order matters: in the example, splitting pane 0 right first makes two columns, then splitting
 pane 0 down stacks the left column.
 
-The event the plugin reacts to is set in [`herdr-plugin.toml`](herdr-plugin.toml) under `[[events]]`.
+The event the plugin reacts to is set in [`herdr-plugin.toml`](herdr-plugin.toml) under `[[events]]`
+(one entry per platform).
+
+## Contributing
+
+`layout.sh` and `layout.ps1` implement the same behavior; a change to one needs the same change
+in the other. `layout.sh` sticks to POSIX `sh` (it runs under `dash` on Debian/Ubuntu) and reads
+herdr's JSON with `grep`, so it needs no extra tools. `layout.ps1` targets Windows PowerShell 5.1.
 
 ### Copying gitignored dev files into new worktrees
 
@@ -108,7 +117,7 @@ If a new worktree opens without the layout, read the plugin's command logs:
 herdr plugin log list
 ```
 
-`layout.ts` logs the event JSON herdr sent and which layout file it used.
+`layout.sh` / `layout.ps1` log the event JSON herdr sent and which layout file it used.
 
-- `no .herdr-layout.yml, skipping`: no layout file in the worktree or the main checkout.
+- `no .herdr-layout, skipping`: no layout file in the worktree or the main checkout.
 - `no workspace_id in event`: the event payload changed shape.
