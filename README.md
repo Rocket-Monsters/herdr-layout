@@ -100,6 +100,24 @@ Order matters in the last one. Splitting pane `0` to the right first makes two c
 splitting pane `0` down stacks the left column. Swap the two lines and you get two panes on
 top and one full-width pane at the bottom instead.
 
+**Claude on the left, a shell below it, lazygit on the right**
+
+```
+┌──────────┬──────────┐
+│  claude  │          │
+├──────────┤ lazygit  │
+│  shell   │          │
+└──────────┴──────────┘
+```
+
+```
+-      -  -  claude
+right  0  -  lazygit
+down   0  -  -
+```
+
+Same shape as the one above; the only change is that the first pane runs `claude`.
+
 ### Where the plugin looks for the file
 
 1. In the new worktree, so a branch can carry its own layout.
