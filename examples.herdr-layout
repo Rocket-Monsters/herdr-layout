@@ -1,0 +1,58 @@
+# Example layouts for herdr-layout.
+#
+# To use one, copy its lines into a file named .herdr-layout at the root of your project
+# and remove the leading "# ". Example 1 is left active, so this file works as-is.
+#
+# Columns: split  of  ratio  command   (write - for the default)
+
+
+# 1. Claude, a shell below it, lazygit on the right
+#
+#    ┌──────────┬──────────┐
+#    │  claude  │          │
+#    ├──────────┤ lazygit  │
+#    │  shell   │          │
+#    └──────────┴──────────┘
+
+-      -  -  claude
+right  0  -  lazygit
+down   0  -  -
+
+
+# 2. Editor on top keeping 70%, a shell at the bottom
+#
+#    ┌─────────────────────┐
+#    │        nvim         │
+#    ├─────────────────────┤
+#    │        shell        │
+#    └─────────────────────┘
+#
+# -     -  -    nvim
+# down  0  0.7  -
+
+
+# 3. Install dependencies first, then Claude next to a dev server and a test watcher
+#
+#    ┌────────────┬────────┐
+#    │            │  dev   │
+#    │   claude   ├────────┤
+#    │            │ tests  │
+#    └────────────┴────────┘
+#
+# run    npm install
+# -      -  -    claude
+# right  0  0.6  npm run dev
+# down   1  -    npm test -- --watch
+
+
+# 4. Two agents side by side, lazygit across the bottom
+#
+#    ┌──────────┬──────────┐
+#    │  claude  │  codex   │
+#    ├──────────┴──────────┤
+#    │       lazygit       │
+#    └─────────────────────┘
+#
+# -      -  -    claude
+# down   0  0.7  lazygit
+# right  0  -    codex
